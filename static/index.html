@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fire Risk Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0B0D0F;
+    --panel: #14171A;
+    --panel-border: #232830;
+    --text-primary: #E8E9EA;
+    --text-secondary: #8A9099;
+    --text-tertiary: #565C66;
+    --low: #3DCB7A;
+    --medium: #F4A93E;
+    --high: #FF6B35;
+    --grid-line: #1C2025;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    border-bottom: 1px solid var(--panel-border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .topbar h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--text-primary);
+  }
+
+  .topbar .meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--low);
+    margin-right: 6px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 1px;
+    background: var(--panel-border);
+    max-width: 1200px;
+    margin: 24px auto;
+    border: 1px solid var(--panel-border);
+  }
+
+  .panel {
+    background: var(--panel);
+    padding: 28px;
+  }
+
+  .field {
+    margin-bottom: 24px;
+  }
+
+  .field-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .field-label .value {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--grid-line);
+    border-radius: 0;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    margin-top: -1px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  .predict-btn {
+    width: 100%;
+    background: var(--text-primary);
+    color: var(--bg);
+    border: none;
+    padding: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  .predict-btn:active { opacity: 0.8; }
+  .predict-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--panel-border);
+  }
+
+  .gauge-section {
+    background: var(--panel);
+    padding: 40px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .gauge-wrap { position: relative; width: 240px; height: 140px; }
+
+  .risk-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 16px;
+  }
+
+  .risk-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 32px;
+    font-weight: 600;
+    margin-top: 4px;
+    transition: color 0.3s ease;
+  }
+
+  .confidence-row {
+    background: var(--panel);
+    padding: 24px 28px;
+  }
+
+  .confidence-row h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    margin: 0 0 16px;
+    font-weight: 500;
+  }
+
+  .conf-bar-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 44px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+
+  .conf-track {
+    height: 6px;
+    background: var(--grid-line);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .conf-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+
+  .log-section {
+    background: var(--panel);
+    padding: 24px 28px;
+    flex: 1;
+  }
+
+  .log-section h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    margin: 0 0 16px;
+    font-weight: 500;
+  }
+
+  .log-entry {
+    display: grid;
+    grid-template-columns: 90px 70px 1fr 50px;
+    gap: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 9px 0;
+    border-top: 1px solid var(--grid-line);
+    color: var(--text-secondary);
+    align-items: center;
+  }
+
+  .log-entry:first-child { border-top: none; }
+
+  .log-badge {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  .log-empty {
+    color: var(--text-tertiary);
+    font-size: 12px;
+    font-style: italic;
+    padding: 8px 0;
+  }
+
+  .error-msg {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--high);
+    margin-top: 12px;
+    display: none;
+  }
+
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+    .log-entry { grid-template-columns: 1fr; gap: 2px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Fire risk console</h1>
+  <div class="meta"><span class="status-dot"></span>model online</div>
+</div>
+
+<div class="layout">
+
+  <div class="panel">
+    <div class="field">
+      <div class="field-label"><span>Temperature</span><span class="value" id="temp-val">28.0°C</span></div>
+      <input type="range" id="temperature" min="-10" max="55" step="0.5" value="28">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>Humidity</span><span class="value" id="hum-val">45%</span></div>
+      <input type="range" id="humidity" min="0" max="100" step="1" value="45">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>Wind speed</span><span class="value" id="wind-val">15 km/h</span></div>
+      <input type="range" id="wind_speed" min="0" max="150" step="1" value="15">
+    </div>
+    <div class="field">
+      <div class="field-label"><span>Rainfall (24h)</span><span class="value" id="rain-val">5 mm</span></div>
+      <input type="range" id="rainfall" min="0" max="200" step="1" value="5">
+    </div>
+
+    <button class="predict-btn" id="predict-btn">Run prediction</button>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <div class="right-panel">
+    <div class="gauge-section">
+      <div class="gauge-wrap">
+        <svg viewBox="0 0 240 140" width="240" height="140">
+          <path d="M 20 120 A 100 100 0 0 1 220 120" fill="none" stroke="#1C2025" stroke-width="14" stroke-linecap="round"/>
+          <path id="gauge-arc" d="M 20 120 A 100 100 0 0 1 220 120" fill="none" stroke="#565C66" stroke-width="14" stroke-linecap="round" stroke-dasharray="0 400" style="transition: stroke-dasharray 0.6s ease, stroke 0.4s ease;"/>
+          <line id="gauge-needle" x1="120" y1="120" x2="120" y2="40" stroke="#E8E9EA" stroke-width="2" style="transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); transform-origin: 120px 120px;"/>
+          <circle cx="120" cy="120" r="6" fill="#E8E9EA"/>
+        </svg>
+      </div>
+      <div class="risk-label">Predicted risk</div>
+      <div class="risk-value" id="risk-value" style="color: var(--text-tertiary);">—</div>
+    </div>
+
+    <div class="confidence-row">
+      <h3>Confidence breakdown</h3>
+      <div class="conf-bar-row">
+        <span>High</span>
+        <div class="conf-track"><div class="conf-fill" id="conf-high" style="background: var(--high);"></div></div>
+        <span id="conf-high-pct">0%</span>
+      </div>
+      <div class="conf-bar-row">
+        <span>Medium</span>
+        <div class="conf-track"><div class="conf-fill" id="conf-medium" style="background: var(--medium);"></div></div>
+        <span id="conf-medium-pct">0%</span>
+      </div>
+      <div class="conf-bar-row">
+        <span>Low</span>
+        <div class="conf-track"><div class="conf-fill" id="conf-low" style="background: var(--low);"></div></div>
+        <span id="conf-low-pct">0%</span>
+      </div>
+    </div>
+
+    <div class="log-section">
+      <h3>Recent predictions (this session)</h3>
+      <div id="log-list">
+        <div class="log-empty">No predictions yet — run one above.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const RISK_COLORS = { High: 'var(--high)', Medium: 'var(--medium)', Low: 'var(--low)' };
+  const RISK_HEX = { High: '#FF6B35', Medium: '#F4A93E', Low: '#3DCB7A' };
+  const GAUGE_ANGLE = { High: 0.92, Medium: 0.5, Low: 0.08 };
+
+  const sliders = ['temperature', 'humidity', 'wind_speed', 'rainfall'];
+  const units = { temperature: '°C', humidity: '%', wind_speed: ' km/h', rainfall: ' mm' };
+  const outIds = { temperature: 'temp-val', humidity: 'hum-val', wind_speed: 'wind-val', rainfall: 'rain-val' };
+
+  sliders.forEach(id => {
+    const el = document.getElementById(id);
+    const out = document.getElementById(outIds[id]);
+    el.addEventListener('input', () => {
+      const v = id === 'temperature' ? parseFloat(el.value).toFixed(1) : Math.round(el.value);
+      out.textContent = v + units[id];
+    });
+  });
+
+  let sessionLog = [];
+
+  // Change this if your API runs somewhere other than the same origin
+  // serving this page. Left blank means "same host" — correct once
+  // FastAPI serves this file itself.
+  const API_BASE = '';
+
+  async function runPrediction() {
+    const btn = document.getElementById('predict-btn');
+    const errEl = document.getElementById('error-msg');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Running...';
+
+    const payload = {
+      temperature: parseFloat(document.getElementById('temperature').value),
+      humidity: parseFloat(document.getElementById('humidity').value),
+      wind_speed: parseFloat(document.getElementById('wind_speed').value),
+      rainfall: parseFloat(document.getElementById('rainfall').value),
+    };
+
+    try {
+      const res = await fetch(API_BASE + '/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const detail = await res.json();
+        throw new Error(typeof detail.detail === 'string' ? detail.detail : 'Invalid input — check ranges.');
+      }
+
+      const data = await res.json();
+      renderResult(data, payload);
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run prediction';
+    }
+  }
+
+  function renderResult(data, inputs) {
+    const risk = data.predicted_risk;
+    const conf = data.confidence;
+
+    const riskEl = document.getElementById('risk-value');
+    riskEl.textContent = risk;
+    riskEl.style.color = RISK_HEX[risk];
+
+    const arc = document.getElementById('gauge-arc');
+    const needle = document.getElementById('gauge-needle');
+    const arcLength = 314;
+    arc.setAttribute('stroke-dasharray', `${arcLength} 400`);
+    arc.setAttribute('stroke', RISK_HEX[risk]);
+
+    const angleDeg = -90 + (GAUGE_ANGLE[risk] * 180);
+    needle.style.transform = `rotate(${angleDeg}deg)`;
+
+    ['High', 'Medium', 'Low'].forEach(level => {
+      const pct = Math.round((conf[level] || 0) * 100);
+      document.getElementById('conf-' + level.toLowerCase()).style.width = pct + '%';
+      document.getElementById('conf-' + level.toLowerCase() + '-pct').textContent = pct + '%';
+    });
+
+    sessionLog.unshift({ time: new Date().toLocaleTimeString(), risk, inputs });
+    sessionLog = sessionLog.slice(0, 8);
+    renderLog();
+  }
+
+  function renderLog() {
+    const list = document.getElementById('log-list');
+    if (sessionLog.length === 0) {
+      list.innerHTML = '<div class="log-empty">No predictions yet — run one above.</div>';
+      return;
+    }
+    list.innerHTML = sessionLog.map(entry => `
+      <div class="log-entry">
+        <span>${entry.time}</span>
+        <span class="log-badge" style="color: ${RISK_HEX[entry.risk]}">${entry.risk}</span>
+        <span>${entry.inputs.temperature}°C · ${entry.inputs.humidity}% hum · ${entry.inputs.wind_speed}km/h wind · ${entry.inputs.rainfall}mm rain</span>
+        <span></span>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('predict-btn').addEventListener('click', runPrediction);
+</script>
+
+</body>
+</html>
